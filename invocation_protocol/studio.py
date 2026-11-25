@@ -619,7 +619,10 @@ def create_studio_server(
                     target_l = resolve_repo_file(root, rel_l)
                     if target_l.suffix != ".jsonl":
                         raise ValidationError("Ledger path must end with .jsonl")
-                    self._send_json(HTTPStatus.OK, load_ledger_payload(target_l))
+                    ledger_payload = load_ledger_payload(target_l)
+                    # Repo-relative path only: never expose the user's absolute filesystem layout.
+                    ledger_payload["path"] = target_l.relative_to(root).as_posix()
+                    self._send_json(HTTPStatus.OK, ledger_payload)
                     return
                 self._send_json(HTTPStatus.NOT_FOUND, {"error": f"Unknown route: {route}"})
             except FileNotFoundError as exc:

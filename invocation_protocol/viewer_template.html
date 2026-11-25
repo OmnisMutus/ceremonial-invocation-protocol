@@ -376,7 +376,7 @@ function renderChrome() {
     : (current()?.label ?? "—");
   const nav = document.getElementById("nav");
   if (!views().some(([id]) => id === state.view)) state.view = "overview";
-  nav.replaceChildren(...views().map(([id, label]) => h("button", { role: "tab", "aria-current": state.view === id ? "page" : null, onclick: () => { state.view = id; closeDrawer(true); render(); } }, label)));
+  nav.replaceChildren(...views().map(([id, label]) => h("button", { role: "tab", "aria-current": state.view === id ? "page" : null, onclick: () => { state.view = id; history.replaceState(null, "", `#${id}`); closeDrawer(true); render(); } }, label)));
 }
 document.getElementById("ledgerSelect").addEventListener("change", (ev) => { state.ledger = Number(ev.target.value); closeDrawer(true); render(); });
 
@@ -765,6 +765,10 @@ if (DATA.length > 1) {
   state.cmpB = byAge.at(-1)[1];
   state.cmpA = byAge.at(-2)[1];
 }
+// Deep links: #overview, #matrix, #gates, #compare open that view directly.
+const viewFromHash = () => { const id = location.hash.slice(1); return views().some(([v]) => v === id) ? id : null; };
+state.view = viewFromHash() || state.view;
+addEventListener("hashchange", () => { const id = viewFromHash(); if (id && id !== state.view) { state.view = id; closeDrawer(true); render(); } });
 render();
 </script>
 </body>

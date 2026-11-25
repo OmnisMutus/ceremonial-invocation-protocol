@@ -353,6 +353,9 @@ class TestStudioServerLoopbackAndCLI(unittest.TestCase):
                 self.assertEqual(st_l, 200)
                 self.assertTrue(led["verified"])
                 self.assertEqual(len(led["entries"]), 35)  # type: ignore[index]
+                # Repo-relative path only; the absolute filesystem path must never reach the browser
+                self.assertEqual(led["path"], mat["trace_path"])
+                self.assertNotIn(str(root.resolve().as_posix()), json.dumps(led))
 
                 # 6. File endpoint + Run-tests endpoint
                 st_f, fdata = _http_json(f"{base_url}/api/file?path=README.md")

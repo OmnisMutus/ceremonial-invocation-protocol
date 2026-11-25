@@ -457,7 +457,7 @@ function renderNav() {
     h("button", {
       role: "tab",
       "aria-current": state.tab === id ? "page" : null,
-      onclick: () => { state.tab = id; render(); },
+      onclick: () => { state.tab = id; history.replaceState(null, "", `#${id}`); render(); },
     }, label)
   ));
 
@@ -1051,14 +1051,24 @@ function render() {
   else app.replaceChildren(renderRepoTab());
 }
 
+// Deep links: #pantheon, #workbench, #codex, #matrix, #repo open that tab directly.
+function tabFromHash() {
+  const id = location.hash.slice(1);
+  return TABS.some(([t]) => t === id) ? id : null;
+}
+addEventListener("hashchange", () => { const id = tabFromHash(); if (id && id !== state.tab) { state.tab = id; render(); } });
+
 async function boot() {
+  state.tab = tabFromHash() || state.tab;
   try {
     state.overview = await apiGet("/api/overview");
     if (state.overview.ollama.models.includes("qwen3:14b")) state.pModel = "qwen3:14b";
     else if (state.overview.ollama.models.length) state.pModel = state.overview.ollama.models[0];
     state.wModel = state.pModel;
 
-    const preferredLedger = state.overview.ledgers.find((l) => l.label === "live_v1_1_qwen3") || state.overview.ledgers[0];
+    // Open the newest archived live ledger by default (live_v1_2_qwen3 > live_v1_1_qwen3 > …).
+    const archived = state.overview.ledgers.filter((l) => /^live_v\d/.test(l.label)).sort((a, b) => b.label.localeCompare(a.label));
+    const preferredLedger = archived[0] || state.overview.ledgers[0];
     if (preferredLedger) {
       state.selectedLedgerPath = preferredLedger.path;
       apiGet(`/api/ledger?path=${encodeURIComponent(preferredLedger.path)}`).then((d) => { state.ledgerData = d; });

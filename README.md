@@ -10,6 +10,26 @@ A zero-dependency, stdlib-only Python runtime lifecycle and evaluation harness t
 
 ---
 
+## Screenshots
+
+**LLM Invocation Studio, Pantheon Trial** (`invocation-protocol studio`): one task run through all 7 arms, each card showing the gate verdict and, separately, whether the answer is correct. This capture uses the deterministic stub, so the outcomes are scripted to exercise the gates, as the banner on the page says.
+
+![LLM Invocation Studio: Pantheon Trial running all 7 arms on the sycophancy task](docs/screenshots/studio-pantheon.png)
+
+| 7-step workbench | Archived ledgers in the Studio |
+|---|---|
+| [![Workbench: one invocation stepped through banish → record, with every gate result and the accepted output](docs/screenshots/studio-workbench.png)](docs/screenshots/studio-workbench.png) | [![Studio Matrix tab: the verified live_v1_2_qwen3 ledger with pass counts and per-task results for each arm](docs/screenshots/studio-matrix.png)](docs/screenshots/studio-matrix.png) |
+
+**Ledger viewer** (`invocation-protocol view`): one offline HTML file per set of verified ledgers.
+
+| Overview | Run matrix | Compare v1.1 → v1.2 |
+|---|---|---|
+| [![Viewer overview of live_v1_2_qwen3: chain verified, headline counts, and per-arm table](docs/screenshots/viewer-overview.png)](docs/screenshots/viewer-overview.png) | [![Viewer run matrix: one cell per arm/form × task, labeled with failing gates](docs/screenshots/viewer-matrix.png)](docs/screenshots/viewer-matrix.png) | [![Viewer compare: live_v1_1_qwen3 → live_v1_2_qwen3, 6 cells fixed, 0 regressed](docs/screenshots/viewer-compare.png)](docs/screenshots/viewer-compare.png) |
+
+Each view has a deep link (`#pantheon`, `#workbench`, `#matrix`, … in the Studio; `#overview`, `#matrix`, `#gates`, `#compare` in the viewer), and that's how these captures were taken: headless Edge at 1440 px wide in dark mode.
+
+---
+
 ## Why "Negative Feedback"? (Control Theory vs. The Runaway Mirror)
 
 In everyday speech, "negative feedback" sounds like criticism. Here it is used strictly in its **control-theory and cybernetic sense** (like a thermostat or engine governor): measuring output against a **fixed external reference** and damping deviation instead of amplifying it.
@@ -290,7 +310,8 @@ Published head hashes (detect truncation or replacement with `verify-ledger --ex
 
 ## Repository Layout
 
-- `invocation_protocol/` — Zero-dependency runtime package (`types.py`, `forms.py`, `tools.py`, `hierarchy.py`, `gates.py`, `backends.py`, `ledger.py`, `runner.py`, `harness.py`, `compare.py`, `viewer.py` + `viewer_template.html`, `cli.py`).
+- `invocation_protocol/` — Zero-dependency runtime package (`types.py`, `forms.py`, `tools.py`, `hierarchy.py`, `gates.py`, `backends.py`, `ledger.py`, `runner.py`, `harness.py`, `compare.py`, `viewer.py` + `viewer_template.html`, `studio.py` + `studio_template.html`, `cli.py`).
+- `docs/screenshots/` — UI captures used in this README.
 - `docs/COGNITIVE_AND_LINGUISTIC_DESIGN.md` — Theoretical and architectural rationale (metacognition, source monitoring, cybernetic negative feedback, and linguistic evidentiality) with primary academic references.
 - `forms/` — Declarative `FormSpec` JSON profiles (`profile_08.json`, `thoth.json`, `maat.json`, `athena.json`, `thoth_corrupted.json`).
 - `tasks/battery.json` — Fixed 5-task evaluation battery across accuracy, sycophancy pushback, quote honesty, tool-claim honesty, and boundary stability.
