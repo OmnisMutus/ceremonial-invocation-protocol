@@ -1,0 +1,1079 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LLM Invocation Studio</title>
+<style>
+:root {
+  --bg: #f4f5f7;
+  --panel: #ffffff;
+  --panel-2: #eef0f4;
+  --ink: #15181e;
+  --ink-2: #454b57;
+  --ink-3: #6f7582;
+  --line: #dadde5;
+  --line-2: #bfc5d1;
+  --accent: #2c58d3;
+  --accent-soft: #e6edfc;
+  --pass: #18794e;
+  --pass-soft: #ddf3e7;
+  --fail: #b93829;
+  --fail-soft: #fbe3df;
+  --warn: #8a5d00;
+  --warn-soft: #f8edd1;
+  --gold: #8c6518;
+  --gold-soft: #f7f0dc;
+  --r: 4px;
+  --mono: ui-monospace, "SFMono-Regular", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1217; --panel: #171b22; --panel-2: #1f242e; --ink: #eceef3; --ink-2: #b6bcc8; --ink-3: #838a98;
+    --line: #29303c; --line-2: #3b4454; --accent: #7da2ff; --accent-soft: #1b2742;
+    --pass: #4cc38a; --pass-soft: #142e21; --fail: #f28273; --fail-soft: #381c19;
+    --warn: #e5b85c; --warn-soft: #332810; --gold: #e5c372; --gold-soft: #2e2614;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1217; --panel: #171b22; --panel-2: #1f242e; --ink: #eceef3; --ink-2: #b6bcc8; --ink-3: #838a98;
+  --line: #29303c; --line-2: #3b4454; --accent: #7da2ff; --accent-soft: #1b2742;
+  --pass: #4cc38a; --pass-soft: #142e21; --fail: #f28273; --fail-soft: #381c19;
+  --warn: #e5b85c; --warn-soft: #332810; --gold: #e5c372; --gold-soft: #2e2614;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 13.5px/1.5 var(--sans); -webkit-font-smoothing: antialiased; }
+button, select, input, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.mono { font-family: var(--mono); font-size: 12px; }
+.muted { color: var(--ink-3); }
+.wrap { max-width: 1360px; margin: 0 auto; padding: 0 22px; }
+.eyebrow { font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; }
+
+header.top { background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 30; }
+.bar1 { display: flex; align-items: center; gap: 12px; min-height: 52px; flex-wrap: wrap; padding: 8px 0; }
+.brand { display: flex; align-items: center; gap: 10px; margin-right: auto; }
+.brand .sigil { width: 28px; height: 28px; border-radius: var(--r); background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); }
+.brand .title { font-weight: 700; font-size: 14.5px; letter-spacing: .01em; }
+.brand .sub { font-size: 11.5px; color: var(--ink-3); font-family: var(--mono); }
+
+.nav { display: flex; gap: 2px; overflow-x: auto; }
+.nav button { border: 0; background: none; cursor: pointer; padding: 10px 14px 9px; color: var(--ink-3); border-bottom: 2px solid transparent; font-size: 12px; letter-spacing: .07em; text-transform: uppercase; font-weight: 700; white-space: nowrap; }
+.nav button:hover { color: var(--ink); }
+.nav button[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); }
+
+.ctl { border: 1px solid var(--line); background: var(--panel); border-radius: var(--r); height: 32px; padding: 0 11px; cursor: pointer; color: var(--ink-2); display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; }
+.ctl:hover { color: var(--ink); border-color: var(--line-2); }
+.btn-primary { background: var(--accent); color: #fff; border: 1px solid var(--accent); border-radius: var(--r); height: 34px; padding: 0 14px; font-weight: 600; font-size: 12.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+.btn-primary:hover { filter: brightness(1.07); }
+.btn-primary:disabled, .ctl:disabled { opacity: .55; cursor: wait; }
+
+main { padding: 18px 0 56px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); margin: 0 0 16px; }
+.phead { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.phead h2 { margin: 0; font-size: 12px; letter-spacing: .09em; text-transform: uppercase; font-weight: 700; }
+.phead p { margin: 0; color: var(--ink-3); font-size: 12px; }
+.pbody { padding: 14px 16px; }
+
+.tag { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: var(--r); font-weight: 600; font-size: 11.5px; border: 1px solid transparent; white-space: nowrap; }
+.tag.ok { background: var(--pass-soft); color: var(--pass); border-color: color-mix(in srgb, var(--pass) 32%, transparent); }
+.tag.bad { background: var(--fail-soft); color: var(--fail); border-color: color-mix(in srgb, var(--fail) 32%, transparent); }
+.tag.warn { background: var(--warn-soft); color: var(--warn); border-color: color-mix(in srgb, var(--warn) 32%, transparent); }
+.tag.info { background: var(--accent-soft); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 32%, transparent); }
+.tag.gold { background: var(--gold-soft); color: var(--gold); border-color: color-mix(in srgb, var(--gold) 32%, transparent); }
+.tag.neutral { background: var(--panel-2); color: var(--ink-2); border-color: var(--line); }
+
+.controls-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; padding: 14px 16px; background: var(--panel-2); border-bottom: 1px solid var(--line); }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-3); font-weight: 700; }
+.field select, .field input { height: 34px; border: 1px solid var(--line); background: var(--panel); border-radius: var(--r); padding: 0 10px; font-size: 12.5px; }
+
+.task-banner { padding: 12px 16px; display: grid; grid-template-columns: 1fr auto; gap: 10px 18px; align-items: start; font-size: 13px; }
+.task-banner .prompt-box { font-weight: 500; color: var(--ink); }
+.source-chip { margin-top: 6px; padding: 6px 10px; background: var(--panel-2); border-left: 3px solid var(--accent); border-radius: var(--r); font-size: 12px; color: var(--ink-2); }
+
+/* Pantheon Grid */
+.pantheon-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 1060px) { .pantheon-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 680px) { .pantheon-grid { grid-template-columns: 1fr; } }
+
+.deity-card { background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--line-2); border-radius: var(--r); display: flex; flex-direction: column; transition: border-color .15s; }
+.deity-card.passed { border-top-color: var(--pass); }
+.deity-card.banished { border-top-color: var(--fail); }
+.dc-head { padding: 12px 14px; border-bottom: 1px solid var(--line); display: flex; align-items: flex-start; gap: 10px; }
+.dc-emblem { width: 36px; height: 36px; border-radius: var(--r); display: grid; place-items: center; flex-shrink: 0; font-size: 18px; background: var(--panel-2); border: 1px solid var(--line); }
+.deity-card.passed .dc-emblem { background: var(--pass-soft); color: var(--pass); border-color: color-mix(in srgb, var(--pass) 30%, transparent); }
+.deity-card.banished .dc-emblem { background: var(--fail-soft); color: var(--fail); border-color: color-mix(in srgb, var(--fail) 30%, transparent); }
+.dc-meta { flex: 1; min-width: 0; }
+.dc-name { font-weight: 700; font-size: 14px; line-height: 1.25; }
+.dc-role { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
+
+.gate-strip { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; padding: 8px 14px; background: var(--panel-2); border-bottom: 1px solid var(--line); }
+.g-pill { text-align: center; padding: 3px 2px; border-radius: 3px; font-family: var(--mono); font-size: 10.5px; font-weight: 600; border: 1px solid var(--line); }
+.g-pill.pass { background: var(--pass-soft); color: var(--pass); border-color: color-mix(in srgb, var(--pass) 28%, transparent); }
+.g-pill.fail { background: var(--fail-soft); color: var(--fail); border-color: color-mix(in srgb, var(--fail) 35%, transparent); }
+
+.dc-body { padding: 12px 14px; flex: 1; display: flex; flex-direction: column; gap: 8px; font-size: 12.5px; }
+.dc-answer { padding: 8px 10px; background: var(--panel-2); border-radius: var(--r); color: var(--ink); line-height: 1.45; max-height: 112px; overflow-y: auto; }
+.dc-reasons { margin: 0; padding-left: 16px; color: var(--fail); font-size: 11.5px; }
+.dc-foot { padding: 9px 14px; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11.5px; color: var(--ink-3); }
+
+/* 7-Step Lifecycle Stepper */
+.stepper { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-bottom: 14px; }
+@media (max-width: 900px) { .stepper { grid-template-columns: repeat(2, 1fr); } }
+.step-btn { border: 1px solid var(--line); background: var(--panel); border-radius: var(--r); padding: 8px 10px; text-align: left; cursor: pointer; transition: all .12s; }
+.step-btn:hover { border-color: var(--line-2); }
+.step-btn.active { border-color: var(--accent); background: var(--accent-soft); }
+.step-btn.ok { border-left: 3px solid var(--pass); }
+.step-btn.bad { border-left: 3px solid var(--fail); }
+.step-btn .s-num { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+.step-btn .s-name { font-weight: 700; font-size: 12px; margin-top: 2px; font-family: var(--mono); }
+.step-btn .s-sub { font-size: 11px; color: var(--ink-3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+pre.code { background: var(--bg); border: 1px solid var(--line); border-radius: var(--r); padding: 11px 13px; margin: 8px 0 0; font: 12px/1.55 var(--mono); white-space: pre-wrap; word-break: break-word; max-height: 520px; overflow: auto; color: var(--ink); }
+
+table { border-collapse: collapse; width: 100%; }
+th, td { text-align: left; padding: 8px 12px; border-top: 1px solid var(--line); vertical-align: top; }
+thead th { font-weight: 700; color: var(--ink-3); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; background: var(--panel-2); border-top: 0; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Repo Explorer */
+.repo-split { display: grid; grid-template-columns: 310px 1fr; min-height: 580px; }
+@media (max-width: 860px) { .repo-split { grid-template-columns: 1fr; } }
+.file-tree { border-right: 1px solid var(--line); max-height: 680px; overflow-y: auto; padding: 8px 0; }
+.ft-group { padding: 6px 14px 3px; font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.ft-item { width: 100%; border: 0; background: none; padding: 5px 14px; text-align: left; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
+.ft-item:hover { background: var(--panel-2); color: var(--ink); }
+.ft-item.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.code-lines { font: 12px/1.55 var(--mono); margin: 0; padding: 12px 0; max-height: 640px; overflow: auto; background: var(--bg); }
+.code-line { display: grid; grid-template-columns: 48px 1fr; padding: 0 14px 0 0; }
+.code-line:hover { background: color-mix(in srgb, var(--panel-2) 70%, transparent); }
+.ln { text-align: right; padding-right: 12px; color: var(--ink-3); user-select: none; }
+.lc { white-space: pre-wrap; word-break: break-word; }
+
+/* Slide-over Ritual Drawer */
+.scrim { position: fixed; inset: 0; background: rgba(8, 10, 15, .42); opacity: 0; pointer-events: none; transition: opacity .16s; z-index: 40; }
+.scrim.open { opacity: 1; pointer-events: auto; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(820px, 100%); background: var(--panel); border-left: 1px solid var(--line); transform: translateX(100%); transition: transform .2s cubic-bezier(.2,.7,.2,1); z-index: 50; display: flex; flex-direction: column; }
+.drawer.open { transform: none; }
+.dhead { padding: 14px 18px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.dbody { padding: 16px 18px 36px; overflow-y: auto; flex: 1; }
+
+.kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.stub-note { margin: 0 0 12px; padding: 9px 12px; border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent); background: var(--warn-soft); border-radius: var(--r); font-size: 12.5px; }
+@media (max-width: 1100px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
+.kpi-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; }
+.kpi-card .val { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; }
+
+.toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 15px; border-radius: var(--r); font-size: 12.5px; opacity: 0; pointer-events: none; transition: opacity .18s; z-index: 80; }
+.toast.on { opacity: 1; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap bar1">
+    <div class="brand">
+      <div class="sigil" aria-hidden="true">☥</div>
+      <div>
+        <div class="title">LLM Invocation Studio</div>
+        <div class="sub" id="hdrSub">Loading workspace…</div>
+      </div>
+    </div>
+    <span class="tag neutral" id="ollamaBadge">Checking Ollama…</span>
+    <button class="ctl" id="themeBtn" title="Toggle light/dark theme">◐ Theme</button>
+  </div>
+  <div class="wrap nav" id="mainNav" role="tablist"></div>
+</header>
+
+<main class="wrap" id="app"></main>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-hidden="true">
+  <div class="dhead">
+    <div>
+      <div class="eyebrow" id="drawerEyebrow">7-Step Lifecycle Trace</div>
+      <div style="font-weight:700;font-size:15px;margin-top:2px" id="drawerTitle">Ritual Inspection</div>
+    </div>
+    <button class="ctl" id="closeDrawerBtn">✕ Close</button>
+  </div>
+  <div class="dbody" id="drawerBody"></div>
+</aside>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+const GATE_SHORT = {
+  schema_gate: "schema",
+  epistemic_gate: "epistemic",
+  quote_gate: "quote",
+  tool_claim_gate: "tool",
+  slip_gate: "slip",
+  correspondence_gate: "corr",
+};
+
+const EMBLEM = {
+  thoth: "𓅝",
+  maat: "⚖",
+  athena: "🦉",
+  profile_08: "◈",
+  thoth_corrupted: "⚡",
+  none: "○",
+};
+
+const state = {
+  overview: null,
+  tab: "pantheon",
+  busy: false,
+  // Pantheon Trial state
+  pTask: "task_sycophancy_01",
+  pBackend: "stub",
+  pModel: "qwen3:14b",
+  pCustomPrompt: "",
+  pantheonResult: null,
+  // Workbench state
+  wArm: "arm_3_protocol_form",
+  wForm: "athena",
+  wTask: "task_boundary_01",
+  wBackend: "stub",
+  wModel: "qwen3:14b",
+  wFailure: "",
+  wCustomPrompt: "",
+  wResult: null,
+  wStepIdx: 4,
+  // Matrix & Ledgers state
+  selectedLedgerPath: "",
+  ledgerData: null,
+  matrixReport: null,
+  // Repo & Tests state
+  fileFilter: "",
+  selectedFile: "README.md",
+  filePayload: null,
+  testResult: null,
+  // Drawer
+  drawerRun: null,
+  drawerStep: 4,
+};
+
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  if (attrs) {
+    for (const [k, v] of Object.entries(attrs)) {
+      if (v === null || v === undefined || v === false) continue;
+      if (k === "class") el.className = v;
+      else if (k.startsWith("on") && typeof v === "function") el.addEventListener(k.slice(2).toLowerCase(), v);
+      else el.setAttribute(k, v === true ? "" : String(v));
+    }
+  }
+  for (const kid of kids.flat(Infinity)) {
+    if (kid === null || kid === undefined || kid === false) continue;
+    el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  }
+  return el;
+}
+
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("on");
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => t.classList.remove("on"), 2200);
+}
+
+async function apiGet(url) {
+  const r = await fetch(url);
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+  return data;
+}
+
+async function apiPost(url, body) {
+  const r = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body || {}),
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+  return data;
+}
+
+/* Theme */
+function applyTheme(t) {
+  if (t) document.documentElement.setAttribute("data-theme", t);
+  else document.documentElement.removeAttribute("data-theme");
+}
+try { applyTheme(localStorage.getItem("cip-studio-theme")); } catch {}
+document.getElementById("themeBtn").addEventListener("click", () => {
+  const cur = document.documentElement.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  const next = cur === "dark" ? "light" : "dark";
+  applyTheme(next);
+  try { localStorage.setItem("cip-studio-theme", next); } catch {}
+});
+
+/* Drawer */
+function openRitualDrawer(run) {
+  state.drawerRun = run;
+  state.drawerStep = 4;
+  renderDrawer();
+  const dr = document.getElementById("drawer");
+  dr.classList.add("open");
+  dr.setAttribute("aria-hidden", "false");
+  document.getElementById("scrim").classList.add("open");
+}
+function closeDrawer() {
+  const dr = document.getElementById("drawer");
+  dr.classList.remove("open");
+  dr.setAttribute("aria-hidden", "true");
+  document.getElementById("scrim").classList.remove("open");
+}
+document.getElementById("closeDrawerBtn").addEventListener("click", closeDrawer);
+document.getElementById("scrim").addEventListener("click", closeDrawer);
+
+function renderRitualInspector(run, activeStep, onSelectStep) {
+  const stages = [
+    { id: "banish", num: "01", sub: "0 prior msgs · clean slate", ok: true },
+    { id: "open_hierarchy", num: "02", sub: run.authority_rendered ? "4-tier AuthorityStack" : "None (unconstrained)", ok: true },
+    { id: "assume_form", num: "03", sub: run.form_id || "None (baseline)", ok: true },
+    { id: "run_charge", num: "04", sub: `${run.tool_log.length} tool call(s) · ${run.elapsed_ms}ms`, ok: Boolean(run.raw_output) },
+    { id: "test_spirit", num: "05", sub: `${run.gates.filter((g) => g.status === "PASS").length}/${run.gates.length} gates PASS`, ok: run.verdict === "PASSED" },
+    { id: "depart", num: "06", sub: `${run.departure.persisted_persona_bytes}B leaked`, ok: run.departure.clean },
+    { id: "record", num: "07", sub: run.trace_hash.slice(0, 10) + "…", ok: Boolean(run.trace_hash) },
+  ];
+
+  const stepper = h("div", { class: "stepper" }, stages.map((st, idx) =>
+    h("button", {
+      class: `step-btn ${st.ok ? "ok" : "bad"} ${activeStep === idx ? "active" : ""}`,
+      onclick: () => onSelectStep(idx),
+    },
+      h("div", { class: "s-num" }, `STEP ${st.num}`),
+      h("div", { class: "s-name" }, `${st.id}()`),
+      h("div", { class: "s-sub" }, st.sub)
+    )
+  ));
+
+  let detail;
+  if (activeStep === 0) {
+    detail = h("div", null,
+      h("div", { class: "eyebrow" }, "Step 1 · banish(config, task, prior_history=())"),
+      h("p", null, "Enforces zero-history context isolation before any persona or prompt is loaded, pins deterministic budgets, and initializes a fresh read-only SandboxToolDispatcher."),
+      h("pre", { class: "code" }, JSON.stringify({ prior_history_accepted: 0, temperature: 0.0, seed: 42, max_turns: 3, max_tool_calls: 2, fail_closed: true }, null, 2))
+    );
+  } else if (activeStep === 1) {
+    detail = h("div", null,
+      h("div", { class: "eyebrow" }, "Step 2 · open_hierarchy(arm, task, config)"),
+      run.authority_rendered
+        ? h("pre", { class: "code" }, run.authority_rendered)
+        : h("p", { class: "muted" }, "Control arm runs WITHOUT an AuthorityStack (testing unconstrained persona/baseline behavior).")
+    );
+  } else if (activeStep === 2) {
+    const fSpec = (state.overview?.forms || []).find((f) => f.form_id === run.form_id);
+    detail = h("div", null,
+      h("div", { class: "eyebrow" }, "Step 3 · assume_form(arm, form)"),
+      fSpec
+        ? h("pre", { class: "code" }, JSON.stringify(fSpec, null, 2))
+        : h("p", { class: "muted" }, "Arm 0 binds form=None.")
+    );
+  } else if (activeStep === 3) {
+    detail = h("div", null,
+      h("div", { class: "eyebrow" }, `Step 4 · run_charge() — Backend: ${run.backend} (${run.thinking_chars} thinking chars)`),
+      h("h4", { style: "margin:10px 0 4px;font-size:12px" }, "Raw Model Output"),
+      h("pre", { class: "code" }, run.raw_output || "<EMPTY>"),
+      run.tool_log.length ? h("div", null,
+        h("h4", { style: "margin:12px 0 4px;font-size:12px" }, "Sandboxed Tool Dispatcher Log"),
+        h("pre", { class: "code" }, JSON.stringify(run.tool_log, null, 2))
+      ) : null,
+      h("h4", { style: "margin:12px 0 4px;font-size:12px" }, "Assembled Prompt Messages Sent to Model"),
+      h("pre", { class: "code" }, JSON.stringify(run.assembled_messages, null, 2))
+    );
+  } else if (activeStep === 4) {
+    detail = h("div", null,
+      h("div", { class: "eyebrow" }, "Step 5 · test_spirit(task, raw_output) — External Deterministic Sensor"),
+      h("div", { style: "display:grid;gap:8px;margin-top:10px" }, run.gates.map((g) =>
+        h("div", { style: "padding:10px 12px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel-2)" },
+          h("div", { style: "display:flex;justify-content:space-between;align-items:center" },
+            h("span", { class: "mono", style: "font-weight:700" }, g.gate_name),
+            h("span", { class: `tag ${g.status === "PASS" ? "ok" : "bad"}` }, g.status === "PASS" ? "✓ PASS" : `✕ ${g.status}`)
+          ),
+          g.reasons && g.reasons.length
+            ? h("ul", { style: "margin:6px 0 0;padding-left:18px;color:var(--fail);font-size:12px" }, g.reasons.map((r) => h("li", null, r)))
+            : h("div", { class: "muted", style: "font-size:11.5px;margin-top:3px" }, "All deterministic checks satisfied.")
+        )
+      )),
+      run.accepted_output ? h("div", null,
+        h("h4", { style: "margin:14px 0 4px;font-size:12px" }, "Accepted Downstream Output (Fail-Closed Gate Passed)"),
+        h("pre", { class: "code" }, JSON.stringify(run.accepted_output, null, 2))
+      ) : h("div", { style: "margin-top:12px;padding:10px 12px;background:var(--fail-soft);color:var(--fail);border-radius:var(--r);font-weight:600" },
+        "accepted_output = None (Output clamped shut by Verdict.BANISHED — unverified persona text cannot propagate downstream)")
+    );
+  } else if (activeStep === 5) {
+    detail = h("div", null,
+      h("div", { class: "eyebrow" }, "Step 6 · depart() — Ephemeral Context Teardown (Kill Criterion K4)"),
+      h("p", null, "Wipes context messages, reasoning traces, active AuthorityStack, bound FormSpec, and tool dispatcher in finally:, measuring residual UTF-8 bytes."),
+      h("pre", { class: "code" }, JSON.stringify(run.departure, null, 2))
+    );
+  } else {
+    detail = h("div", null,
+      h("div", { class: "eyebrow" }, "Step 7 · record() — Append-Only SHA-256 Liber E Audit Chain"),
+      h("pre", { class: "code" }, JSON.stringify({ trace_id: run.trace_id, entry_hash: run.trace_hash, verdict: run.verdict, lifecycle_stages: run.lifecycle_stages }, null, 2))
+    );
+  }
+
+  return h("div", null, stepper, detail);
+}
+
+function renderDrawer() {
+  const run = state.drawerRun;
+  if (!run) return;
+  document.getElementById("drawerEyebrow").textContent = `${run.arm} · ${run.task_id} · ${run.backend}`;
+  document.getElementById("drawerTitle").textContent = `${run.display_name} — ${run.verdict}`;
+  const body = document.getElementById("drawerBody");
+  body.replaceChildren(
+    renderRitualInspector(run, state.drawerStep, (idx) => {
+      state.drawerStep = idx;
+      renderDrawer();
+    })
+  );
+}
+
+/* Navigation */
+const TABS = [
+  ["pantheon", "1 · Pantheon Trial"],
+  ["workbench", "2 · 7-Step Ritual Workbench"],
+  ["codex", "3 · Deity Codex (Forms)"],
+  ["matrix", "4 · Matrix & Ledgers"],
+  ["repo", "5 · Repo & Test Runner"],
+];
+
+function renderNav() {
+  const nav = document.getElementById("mainNav");
+  nav.replaceChildren(...TABS.map(([id, label]) =>
+    h("button", {
+      role: "tab",
+      "aria-current": state.tab === id ? "page" : null,
+      onclick: () => { state.tab = id; render(); },
+    }, label)
+  ));
+
+  if (state.overview) {
+    document.getElementById("hdrSub").textContent =
+      `v${state.overview.version} · protocol ${state.overview.protocol_version} · ${state.overview.files.length} repo files · ${state.overview.ledgers.length} ledgers`;
+    const ob = document.getElementById("ollamaBadge");
+    if (state.overview.ollama.reachable) {
+      ob.className = "tag ok";
+      ob.textContent = `● Ollama Online (${state.overview.ollama.models.length} models)`;
+    } else {
+      ob.className = "tag neutral";
+      ob.textContent = "○ Ollama Offline (Stub Ready)";
+    }
+  }
+}
+
+/* Tab 1: Pantheon Trial */
+async function runPantheonTrial() {
+  if (state.busy) return;
+  state.busy = true;
+  render();
+  try {
+    state.pantheonResult = await apiPost("/api/pantheon", {
+      task_id: state.pTask,
+      backend: state.pBackend,
+      model: state.pModel,
+      custom_prompt: state.pCustomPrompt,
+    });
+    state.overview = await apiGet("/api/overview");
+    toast(`Completed ${state.pantheonResult.runs.length} arms (${state.pantheonResult.backend})`);
+  } catch (err) {
+    toast(`Error: ${err.message}`);
+  } finally {
+    state.busy = false;
+    render();
+  }
+}
+
+function extractDisplayAnswer(run) {
+  if (run.accepted_output && run.accepted_output.answer) return run.accepted_output.answer;
+  try {
+    const p = JSON.parse(run.raw_output);
+    if (p && typeof p.answer === "string") return p.answer;
+  } catch {}
+  return run.raw_output || "<empty>";
+}
+
+function renderPantheonTab() {
+  const ov = state.overview;
+  const taskObj = ov.tasks.find((t) => t.task_id === state.pTask) || ov.tasks[0];
+  const models = ov.ollama.models.length ? ov.ollama.models : ["qwen3:14b"];
+
+  const bar = h("div", { class: "controls-bar" },
+    h("div", { class: "field", style: "flex:1;min-width:230px" },
+      h("label", null, "Evaluation Task"),
+      h("select", {
+        onchange: (e) => { state.pTask = e.target.value; state.pCustomPrompt = ""; runPantheonTrial(); },
+      }, ov.tasks.map((t) => h("option", { value: t.task_id, selected: t.task_id === state.pTask }, `${t.task_id} (${t.category})`)))
+    ),
+    h("div", { class: "field" },
+      h("label", null, "Backend"),
+      h("select", {
+        onchange: (e) => { state.pBackend = e.target.value; render(); },
+      },
+        h("option", { value: "stub", selected: state.pBackend === "stub" }, "Deterministic Stub (Instant)"),
+        h("option", { value: "ollama", selected: state.pBackend === "ollama" }, "Live Ollama Model")
+      )
+    ),
+    state.pBackend === "ollama" ? h("div", { class: "field" },
+      h("label", null, "Ollama Model"),
+      h("select", { onchange: (e) => { state.pModel = e.target.value; } },
+        models.map((m) => h("option", { value: m, selected: m === state.pModel }, m))
+      )
+    ) : null,
+    h("div", { class: "field", style: "flex:1;min-width:220px" },
+      h("label", null, "Optional Custom Prompt Override"),
+      h("input", {
+        type: "text",
+        placeholder: "Leave blank to use canonical battery prompt…",
+        value: state.pCustomPrompt,
+        oninput: (e) => { state.pCustomPrompt = e.target.value; },
+      })
+    ),
+    h("button", { class: "btn-primary", disabled: state.busy, onclick: runPantheonTrial },
+      state.busy
+        ? (state.pBackend === "ollama" ? "Running 7 arms on Ollama (several minutes)…" : "Running…")
+        : "▶ Run All 7 Arms"
+    )
+  );
+
+  const taskBanner = h("div", { class: "task-banner" },
+    h("div", null,
+      h("div", { class: "eyebrow" }, `Active Charge · ${taskObj.task_id} · Category: ${taskObj.category}`),
+      h("div", { class: "prompt-box", style: "margin-top:4px" }, state.pCustomPrompt.trim() || taskObj.prompt),
+      Object.entries(taskObj.sources).map(([sid, stxt]) =>
+        h("div", { class: "source-chip" }, h("b", { class: "mono" }, `Source [${sid}]: `), stxt)
+      ),
+      taskObj.allowed_tools.length
+        ? h("div", { class: "source-chip" }, h("b", { class: "mono" }, "Allowed Scoped Tools: "), taskObj.allowed_tools.join(", "))
+        : null
+    ),
+    h("div", { style: "text-align:right" },
+      h("span", { class: "tag info" }, "7-Step Lifecycle + 6 Gates")
+    )
+  );
+
+  const runs = state.pantheonResult?.runs || [];
+  const isStub = String(state.pantheonResult?.backend || "").startsWith("deterministic-stub");
+  // Group by arm, never by card position, so reordering the lineup cannot mislabel a KPI.
+  const byArm = (arm) => runs.filter((r) => r.arm === arm);
+  const tally = (list, pred) => `${list.filter(pred).length} / ${list.length}`;
+  const isPassed = (r) => r.verdict === "PASSED";
+  const deities = byArm("arm_3_protocol_form");
+  const neutral = byArm("arm_2_protocol_neutral");
+  const baseline = byArm("arm_0_baseline");
+  const naive = byArm("arm_1_naive_summoning");
+  const integrity = byArm("arm_3b_corrupted_correspondence");
+  const residualBytes = runs.reduce((s, r) => s + Number(r.departure.persisted_persona_bytes || 0), 0);
+  const kpi = (label, val, sub, color) => h("div", { class: "kpi-card" },
+    h("div", { class: "eyebrow" }, label),
+    h("div", { class: "val", style: color ? `color:${color}` : null }, val),
+    sub ? h("div", { class: "muted", style: "font-size:11.5px;margin-top:2px" }, sub) : null);
+
+  const summaryKpis = runs.length ? h("div", null,
+    isStub ? h("div", { class: "stub-note" }, h("b", null, "Deterministic stub: "),
+      "these outcomes are scripted to exercise the gates and lifecycle. They say nothing about how a real model behaves. Switch the backend to Live Ollama for real results.") : null,
+    h("div", { class: "kpis" },
+      kpi("Deity forms passed gates", tally(deities, isPassed), `answers correct: ${tally(deities, (r) => r.accurate)}`),
+      kpi("Neutral protocol / baseline passed", `${tally(neutral, isPassed)} · ${tally(baseline, isPassed)}`, "Arm 2 · Arm 0 (schema-only)"),
+      kpi("Naive summoning banished", tally(naive, (r) => !isPassed(r)), "unconstrained persona (Arm 1)"),
+      kpi("Form-integrity check rejected", tally(integrity, (r) => !isPassed(r)), "metadata check, not model behavior"),
+      kpi("Residual bytes after depart() (K4)", `${residualBytes} B`, `${runs.filter((r) => !r.departure.clean).length} unclean run(s)`, residualBytes ? "var(--fail)" : null))
+  ) : null;
+
+  const cards = h("div", { class: "pantheon-grid" }, runs.map((run) => {
+    const isPass = run.verdict === "PASSED";
+    const failReasons = run.gates.filter((g) => g.status !== "PASS").flatMap((g) => g.reasons.map((r) => `${GATE_SHORT[g.gate_name] || g.gate_name}: ${r}`));
+    const claims = run.accepted_output?.claims || [];
+    return h("article", { class: `deity-card ${isPass ? "passed" : "banished"}` },
+      h("div", { class: "dc-head" },
+        h("div", { class: "dc-emblem" }, EMBLEM[run.form_id || "none"] || "◈"),
+        h("div", { class: "dc-meta" },
+          h("div", { class: "dc-name" }, run.display_name),
+          h("div", { class: "dc-role" }, run.role_label || run.arm)
+        ),
+        h("div", { style: "display:flex;flex-direction:column;gap:4px;align-items:flex-end" },
+          h("span", { class: `tag ${isPass ? "ok" : "bad"}` }, isPass ? "✓ PASSED" : "✕ BANISHED"),
+          h("span", {
+            class: `tag ${run.accurate ? "info" : "neutral"}`,
+            title: "Accuracy rubric from tasks/battery.json, scored independently of the gates",
+          }, run.accurate ? "answer correct" : "answer incorrect"))
+      ),
+      h("div", { class: "gate-strip" }, run.gates.map((g) =>
+        h("div", {
+          class: `g-pill ${g.status === "PASS" ? "pass" : "fail"}`,
+          title: `${g.gate_name}: ${g.status}${g.reasons.length ? " — " + g.reasons.join("; ") : ""}`,
+        }, `${g.status === "PASS" ? "✓" : "✕"} ${GATE_SHORT[g.gate_name] || g.gate_name}`)
+      )),
+      h("div", { class: "dc-body" },
+        h("div", { class: "dc-answer" }, extractDisplayAnswer(run)),
+        claims.length ? h("div", { style: "display:flex;gap:4px;flex-wrap:wrap" },
+          claims.map((c) => h("span", { class: "tag neutral", title: c.text }, `[${c.epistemic_tag}] ${c.text.slice(0, 44)}${c.text.length > 44 ? "…" : ""}`))
+        ) : null,
+        failReasons.length ? h("ul", { class: "dc-reasons" }, failReasons.slice(0, 3).map((r) => h("li", null, r))) : null
+      ),
+      h("div", { class: "dc-foot" },
+        h("span", { class: "mono" }, `depart: ${run.departure.persisted_persona_bytes}B · ${run.elapsed_ms}ms`),
+        h("button", { class: "ctl", style: "height:26px;font-size:11.5px", onclick: () => openRitualDrawer(run) }, "Inspect 7 Steps →")
+      )
+    );
+  }));
+
+  return h("div", null,
+    h("section", { class: "panel" },
+      h("div", { class: "phead" },
+        h("h2", null, "Pantheon Trial Arena"),
+        h("p", null, "Run one task through every arm side by side: three deity forms, the neutral protocol, the schema-only baseline, unconstrained summoning, and the form-integrity check. Each card shows the gate verdict and, separately, whether the answer is correct.")
+      ),
+      bar,
+      taskBanner
+    ),
+    summaryKpis,
+    cards
+  );
+}
+
+/* Tab 2: 7-Step Ritual Workbench */
+async function runSingleWorkbench() {
+  if (state.busy) return;
+  state.busy = true;
+  render();
+  try {
+    state.wResult = await apiPost("/api/invoke", {
+      arm: state.wArm,
+      form_id: state.wArm === "arm_0_baseline" ? null : state.wForm,
+      task_id: state.wTask,
+      backend: state.wBackend,
+      model: state.wModel,
+      inject_failure: state.wBackend === "stub" ? state.wFailure : null,
+      custom_prompt: state.wCustomPrompt,
+    });
+    state.overview = await apiGet("/api/overview");
+    toast(`Invocation verdict: ${state.wResult.verdict}`);
+  } catch (err) {
+    toast(`Invocation error: ${err.message}`);
+  } finally {
+    state.busy = false;
+    render();
+  }
+}
+
+function syncDefaultFormForArm(arm) {
+  if (arm === "arm_2_protocol_neutral") state.wForm = "profile_08";
+  else if (arm === "arm_3b_corrupted_correspondence") state.wForm = "thoth_corrupted";
+  else if (arm === "arm_3_protocol_form" && !["thoth", "maat", "athena"].includes(state.wForm)) state.wForm = "thoth";
+  else if (arm === "arm_1_naive_summoning" && !state.wForm) state.wForm = "thoth";
+}
+
+function renderWorkbenchTab() {
+  const ov = state.overview;
+  const models = ov.ollama.models.length ? ov.ollama.models : ["qwen3:14b"];
+  const controls = h("div", { class: "controls-bar" },
+    h("div", { class: "field" },
+      h("label", null, "Evaluation Arm"),
+      h("select", {
+        onchange: (e) => { state.wArm = e.target.value; syncDefaultFormForArm(state.wArm); render(); },
+      }, ov.arms.map((a) => h("option", { value: a.id, selected: a.id === state.wArm }, a.label)))
+    ),
+    state.wArm !== "arm_0_baseline" ? h("div", { class: "field" },
+      h("label", null, "Bound FormSpec"),
+      h("select", { onchange: (e) => { state.wForm = e.target.value; } },
+        ov.forms.map((f) => h("option", { value: f.form_id, selected: f.form_id === state.wForm }, `${f.display_name} (${f.arm_type})`))
+      )
+    ) : null,
+    h("div", { class: "field" },
+      h("label", null, "Task"),
+      h("select", { onchange: (e) => { state.wTask = e.target.value; } },
+        ov.tasks.map((t) => h("option", { value: t.task_id, selected: t.task_id === state.wTask }, `${t.task_id} (${t.category})`))
+      )
+    ),
+    h("div", { class: "field" },
+      h("label", null, "Backend"),
+      h("select", { onchange: (e) => { state.wBackend = e.target.value; render(); } },
+        h("option", { value: "stub", selected: state.wBackend === "stub" }, "Deterministic Stub"),
+        h("option", { value: "ollama", selected: state.wBackend === "ollama" }, "Live Ollama")
+      )
+    ),
+    state.wBackend === "stub" ? h("div", { class: "field" },
+      h("label", null, "Inject Failure (Break-It Lab)"),
+      h("select", { onchange: (e) => { state.wFailure = e.target.value; } },
+        h("option", { value: "", selected: state.wFailure === "" }, "None (Normal Response)"),
+        ov.failure_modes.map((m) => h("option", { value: m, selected: m === state.wFailure }, m))
+      )
+    ) : h("div", { class: "field" },
+      h("label", null, "Ollama Model"),
+      h("select", { onchange: (e) => { state.wModel = e.target.value; } },
+        models.map((m) => h("option", { value: m, selected: m === state.wModel }, m))
+      )
+    ),
+    h("button", { class: "btn-primary", disabled: state.busy, onclick: runSingleWorkbench },
+      state.busy ? "Executing 7 Steps…" : "▶ Invoke 7-Step Lifecycle"
+    )
+  );
+
+  return h("section", { class: "panel" },
+    h("div", { class: "phead" },
+      h("h2", null, "7-Step Ceremonial Lifecycle & Failure-Injection Workbench"),
+      h("p", null, "Test any deity form, arm, or injected failure mode (e.g. ontological_slip, fabricated_quote, correspondence_drift) step by step.")
+    ),
+    controls,
+    h("div", { class: "pbody" },
+      state.wResult
+        ? h("div", null,
+            h("div", { style: "display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap" },
+              h("span", { class: `tag ${state.wResult.verdict === "PASSED" ? "ok" : "bad"}` },
+                state.wResult.verdict === "PASSED" ? "✓ VERDICT: PASSED" : "✕ VERDICT: BANISHED"
+              ),
+              h("span", { class: `tag ${state.wResult.accurate ? "ok" : "warn"}` },
+                state.wResult.accurate ? "Task Rubric: Accurate" : "Task Rubric: Did Not Match"
+              ),
+              h("span", { class: "tag neutral mono" }, `trace_id=${state.wResult.trace_id.slice(0, 12)}…`),
+              h("span", { class: "tag neutral mono" }, `persisted_persona_bytes=${state.wResult.departure.persisted_persona_bytes}`)
+            ),
+            renderRitualInspector(state.wResult, state.wStepIdx, (idx) => { state.wStepIdx = idx; render(); })
+          )
+        : h("p", { class: "muted" }, "Click '▶ Invoke 7-Step Lifecycle' above to execute and inspect every stage.")
+    )
+  );
+}
+
+/* Tab 3: Deity Codex */
+function renderCodexTab() {
+  const ov = state.overview;
+  return h("div", null,
+    h("section", { class: "panel" },
+      h("div", { class: "phead" },
+        h("h2", null, "Declarative FormSpec Profiles (forms/*.json)"),
+        h("p", null, "Zero Python code per deity: each profile binds a domain slice, canonical symbols, forbidden attributions, and anti-cliché rules.")
+      ),
+      h("div", { class: "pbody pantheon-grid" }, ov.forms.map((f) => {
+        const ok = f.correspondence_check.status === "PASS";
+        return h("div", { class: `deity-card ${ok ? "passed" : "banished"}` },
+          h("div", { class: "dc-head" },
+            h("div", { class: "dc-emblem" }, EMBLEM[f.form_id] || "◈"),
+            h("div", { class: "dc-meta" },
+              h("div", { class: "dc-name" }, f.display_name),
+              h("div", { class: "dc-role mono" }, `forms/${f.form_id}.json · ${f.arm_type}`)
+            ),
+            h("span", { class: `tag ${ok ? "ok" : "bad"}` }, ok ? "✓ Canonical" : "✕ Deformed")
+          ),
+          h("div", { class: "dc-body" },
+            h("div", null, h("b", null, "Tradition / Sphere: "), `${f.tradition} · ${f.correspondence_slice.domain} · ${f.correspondence_slice.element} / ${f.correspondence_slice.planet_or_sphere}`),
+            h("div", null, h("b", null, "Operational Focus: "), h("span", { class: "mono" }, f.correspondence_slice.operational_focus)),
+            h("div", null, h("b", null, "Epithets: "), f.epithets.join(" · ")),
+            h("div", null, h("b", null, "Symbols: "), f.correspondence_slice.symbols.length ? f.correspondence_slice.symbols.join(", ") : "(none — neutral control)"),
+            h("div", null, h("b", null, "Forbidden Attributions: "), h("span", { class: "muted" }, f.forbidden_attributions.join(", "))),
+            h("div", null, h("b", null, "Banned Clichés: "), h("span", { class: "muted" }, f.banned_cliches.join(", "))),
+            !ok ? h("ul", { class: "dc-reasons" }, f.correspondence_check.reasons.map((r) => h("li", null, r))) : null
+          ),
+          h("div", { class: "dc-foot" },
+            h("button", {
+              class: "ctl",
+              style: "height:26px;font-size:11.5px",
+              onclick: () => {
+                state.wArm = f.arm_type === "neutral" ? "arm_2_protocol_neutral" : (f.arm_type === "corrupted_control" ? "arm_3b_corrupted_correspondence" : "arm_3_protocol_form");
+                state.wForm = f.form_id;
+                state.tab = "workbench";
+                runSingleWorkbench();
+              },
+            }, "Test in Workbench →"),
+            h("button", {
+              class: "ctl",
+              style: "height:26px;font-size:11.5px",
+              onclick: () => { state.tab = "repo"; loadRepoFile(`forms/${f.form_id}.json`); },
+            }, "View JSON")
+          )
+        );
+      }))
+    )
+  );
+}
+
+/* Tab 4: Matrix & Ledgers */
+async function loadSelectedLedger(path) {
+  state.selectedLedgerPath = path;
+  try {
+    state.ledgerData = await apiGet(`/api/ledger?path=${encodeURIComponent(path)}`);
+  } catch (err) {
+    toast(`Ledger error: ${err.message}`);
+  }
+  render();
+}
+
+async function runFullMatrix(backendKind) {
+  if (state.busy) return;
+  state.busy = true;
+  render();
+  try {
+    state.matrixReport = await apiPost("/api/matrix", { backend: backendKind, model: state.pModel });
+    state.overview = await apiGet("/api/overview");
+    await loadSelectedLedger(state.matrixReport.trace_path);
+    toast(`Completed 35-run matrix (${state.matrixReport.backend_name})`);
+  } catch (err) {
+    toast(`Matrix error: ${err.message}`);
+  } finally {
+    state.busy = false;
+    render();
+  }
+}
+
+function renderMatrixTab() {
+  const ov = state.overview;
+  const L = state.ledgerData;
+
+  const topBar = h("div", { class: "controls-bar" },
+    h("div", { class: "field", style: "min-width:280px" },
+      h("label", null, "Verified Liber E Trace Ledgers (runs/*/traces.jsonl)"),
+      h("select", {
+        onchange: (e) => loadSelectedLedger(e.target.value),
+      }, ov.ledgers.map((l) => h("option", { value: l.path, selected: l.path === state.selectedLedgerPath }, `${l.label} (${l.record_count} runs · ${l.verified ? "SHA-256 OK" : "BROKEN"})`)))
+    ),
+    h("button", { class: "btn-primary", disabled: state.busy, onclick: () => runFullMatrix("stub") },
+      state.busy ? "Running…" : "▶ Run Full 35-Run Matrix (Stub)"
+    ),
+    ov.ollama.reachable ? h("button", { class: "ctl", disabled: state.busy, onclick: () => runFullMatrix("ollama") },
+      `▶ Run 35-Run Matrix (Ollama ${state.pModel})`
+    ) : null
+  );
+
+  const kcBlock = state.matrixReport ? h("div", { class: "pbody", style: "border-bottom:1px solid var(--line)" },
+    h("div", { class: "eyebrow", style: "margin-bottom:8px" }, `Kill Criteria (K1–K4) · ${state.matrixReport.backend_name}`),
+    h("div", { style: "display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px" },
+      state.matrixReport.kill_criteria.map((kc) =>
+        h("div", { style: "padding:9px 12px;border:1px solid var(--line);border-radius:var(--r);display:flex;justify-content:space-between;gap:10px;align-items:center" },
+          h("div", null, h("b", { class: "mono" }, kc.criterion_id), " — ", h("span", { style: "font-size:12px;color:var(--ink-2)" }, kc.reason)),
+          h("span", { class: `tag ${kc.triggered ? "warn" : "ok"}` }, kc.triggered ? "TRIGGERED" : "OK")
+        )
+      )
+    )
+  ) : null;
+
+  let ledgerTable = null;
+  if (L && L.entries) {
+    const groups = new Map();
+    for (const e of L.entries) {
+      const k = `${e.arm} · ${e.form_id || "none"}`;
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(e);
+    }
+    ledgerTable = h("div", { class: "pbody" },
+      h("div", { style: "display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px" },
+        h("span", { class: `tag ${L.verified ? "ok" : "bad"}` }, L.verified ? "✓ SHA-256 CHAIN VERIFIED" : "✕ CHAIN CORRUPT"),
+        h("span", { class: "mono muted" }, `Path: ${L.path}`),
+        h("span", { class: "mono muted" }, `Records: ${L.entries.length}`),
+        L.head ? h("span", { class: "mono muted" }, `Head: ${L.head.slice(0, 16)}…`) : null
+      ),
+      h("table", null,
+        h("thead", null, h("tr", null,
+          h("th", null, "Arm · Form"),
+          h("th", { class: "num" }, "Passed"),
+          h("th", { class: "num" }, "Slips"),
+          h("th", { class: "num" }, "Corr Fail"),
+          h("th", { class: "num" }, "Leaks (B)"),
+          h("th", null, "Sample Trace Inspection")
+        )),
+        h("tbody", null, [...groups.entries()].map(([k, arr]) => {
+          const p = arr.filter((x) => x.verdict === "PASSED").length;
+          const slips = arr.filter((x) => (x.gates || []).some((g) => g.gate_name === "slip_gate" && g.status !== "PASS")).length;
+          const corr = arr.filter((x) => (x.gates || []).some((g) => g.gate_name === "correspondence_gate" && g.status !== "PASS")).length;
+          const leaks = arr.reduce((s, x) => s + Number(x.departure?.persisted_persona_bytes || 0), 0);
+          return h("tr", null,
+            h("td", { class: "mono", style: "font-weight:600" }, k),
+            h("td", { class: "num" }, h("span", { class: `tag ${p === arr.length ? "ok" : (p === 0 ? "bad" : "warn")}` }, `${p} / ${arr.length}`)),
+            h("td", { class: "num mono" }, String(slips)),
+            h("td", { class: "num mono" }, String(corr)),
+            h("td", { class: "num mono" }, String(leaks)),
+            h("td", null, h("div", { style: "display:flex;gap:4px;flex-wrap:wrap" }, arr.slice(0, 5).map((e) =>
+              h("button", {
+                class: "ctl",
+                style: "height:24px;padding:0 7px;font-size:11px",
+                onclick: () => openRitualDrawer({
+                  trace_id: e.trace_id || "",
+                  trace_hash: e.entry_hash || "",
+                  backend: e.backend || "ledger",
+                  arm: e.arm,
+                  form_id: e.form_id,
+                  display_name: e.form_id || e.arm,
+                  task_id: e.task_id,
+                  verdict: e.verdict,
+                  authority_rendered: "(archived ledger trace)",
+                  assembled_messages: [],
+                  raw_output: e.raw_output || "",
+                  accepted_output: e.accepted_output || null,
+                  thinking_chars: e.thinking_chars || 0,
+                  tool_log: e.tool_log || [],
+                  gates: e.gates || [],
+                  departure: e.departure || { clean: true, persisted_persona_bytes: 0 },
+                  elapsed_ms: 0,
+                }),
+              }, `${e.verdict === "PASSED" ? "✓" : "✕"} ${e.task_id.replace("task_", "")}`)
+            )))
+          );
+        }))
+      )
+    );
+  }
+
+  return h("section", { class: "panel" },
+    h("div", { class: "phead" },
+      h("h2", null, "5-Arm Evaluation Matrix, Kill Criteria (K1–K4), & Verified Ledgers"),
+      h("p", null, "Inspect archived live Qwen3/Qwen2.5 ledgers or run a fresh 35-invocation matrix.")
+    ),
+    topBar,
+    kcBlock,
+    ledgerTable
+  );
+}
+
+/* Tab 5: Repo & Tests */
+async function loadRepoFile(relPath) {
+  state.selectedFile = relPath;
+  try {
+    state.filePayload = await apiGet(`/api/file?path=${encodeURIComponent(relPath)}`);
+  } catch (err) {
+    toast(`File error: ${err.message}`);
+  }
+  render();
+}
+
+async function runUnitTests() {
+  if (state.busy) return;
+  state.busy = true;
+  render();
+  try {
+    state.testResult = await apiPost("/api/run-tests", {});
+    toast(state.testResult.passed ? "All unit tests PASSED" : "Unit tests reported failures");
+  } catch (err) {
+    toast(`Test runner error: ${err.message}`);
+  } finally {
+    state.busy = false;
+    render();
+  }
+}
+
+function renderRepoTab() {
+  const ov = state.overview;
+  const q = state.fileFilter.trim().toLowerCase();
+  const files = ov.files.filter((f) => !q || f.path.toLowerCase().includes(q));
+  const byCat = new Map();
+  for (const f of files) {
+    if (!byCat.has(f.category)) byCat.set(f.category, []);
+    byCat.get(f.category).push(f);
+  }
+
+  const tree = h("div", { class: "file-tree" },
+    h("div", { style: "padding:4px 12px 8px" },
+      h("input", {
+        type: "search",
+        placeholder: "Filter repository files…",
+        style: "width:100%;height:30px;border:1px solid var(--line);background:var(--panel);border-radius:var(--r);padding:0 8px;font-size:12px",
+        value: state.fileFilter,
+        oninput: (e) => { state.fileFilter = e.target.value; render(); },
+      })
+    ),
+    [...byCat.entries()].map(([cat, list]) => h("div", null,
+      h("div", { class: "ft-group" }, `${cat} (${list.length})`),
+      list.map((f) => h("button", {
+        class: `ft-item ${f.path === state.selectedFile ? "active" : ""}`,
+        onclick: () => loadRepoFile(f.path),
+      },
+        h("span", { style: "overflow:hidden;text-overflow:ellipsis;white-space:nowrap" }, f.path),
+        h("span", { class: "muted", style: "font-size:10.5px" }, `${(f.size / 1024).toFixed(1)}K`)
+      ))
+    ))
+  );
+
+  const fp = state.filePayload;
+  const lines = fp ? fp.content.split("\n") : [];
+  const viewer = h("div", { style: "min-width:0;display:flex;flex-direction:column" },
+    h("div", { style: "padding:10px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;background:var(--panel-2)" },
+      h("span", { class: "mono", style: "font-weight:700" }, fp ? fp.path : "Select a file"),
+      fp ? h("span", { class: "muted mono" }, `${fp.line_count} lines · ${fp.size.toLocaleString()} bytes`) : null
+    ),
+    fp ? h("div", { class: "code-lines" }, lines.map((ln, idx) =>
+      h("div", { class: "code-line" },
+        h("span", { class: "ln" }, String(idx + 1)),
+        h("span", { class: "lc" }, ln || " ")
+      )
+    )) : h("div", { class: "pbody muted" }, "Loading file…")
+  );
+
+  return h("div", null,
+    h("section", { class: "panel" },
+      h("div", { class: "phead" },
+        h("h2", null, "Live Repository Test Suite Runner (unittest)"),
+        h("button", { class: "btn-primary", disabled: state.busy, onclick: runUnitTests },
+          state.busy ? "Running unittest…" : "▶ Run Full Unit Test Suite"
+        )
+      ),
+      state.testResult ? h("div", { class: "pbody" },
+        h("div", { style: "margin-bottom:8px" },
+          h("span", { class: `tag ${state.testResult.passed ? "ok" : "bad"}` },
+            state.testResult.passed ? "✓ UNITTEST SUITE PASSED (EXIT 0)" : `✕ EXIT CODE ${state.testResult.returncode}`
+          )
+        ),
+        h("pre", { class: "code", style: "max-height:240px" }, state.testResult.output)
+      ) : null
+    ),
+    h("section", { class: "panel" },
+      h("div", { class: "phead" },
+        h("h2", null, "Repository Source, Forms, Tasks, & Docs Explorer"),
+        h("p", null, "Read-only path-confined view of every module, declarative FormSpec JSON, task battery, and test in the workspace.")
+      ),
+      h("div", { class: "repo-split" }, tree, viewer)
+    )
+  );
+}
+
+function render() {
+  renderNav();
+  const app = document.getElementById("app");
+  if (!state.overview) {
+    app.replaceChildren(h("div", { class: "panel pbody" }, "Initializing LLM Invocation Studio…"));
+    return;
+  }
+  if (state.tab === "pantheon") app.replaceChildren(renderPantheonTab());
+  else if (state.tab === "workbench") app.replaceChildren(renderWorkbenchTab());
+  else if (state.tab === "codex") app.replaceChildren(renderCodexTab());
+  else if (state.tab === "matrix") app.replaceChildren(renderMatrixTab());
+  else app.replaceChildren(renderRepoTab());
+}
+
+async function boot() {
+  try {
+    state.overview = await apiGet("/api/overview");
+    if (state.overview.ollama.models.includes("qwen3:14b")) state.pModel = "qwen3:14b";
+    else if (state.overview.ollama.models.length) state.pModel = state.overview.ollama.models[0];
+    state.wModel = state.pModel;
+
+    const preferredLedger = state.overview.ledgers.find((l) => l.label === "live_v1_1_qwen3") || state.overview.ledgers[0];
+    if (preferredLedger) {
+      state.selectedLedgerPath = preferredLedger.path;
+      apiGet(`/api/ledger?path=${encodeURIComponent(preferredLedger.path)}`).then((d) => { state.ledgerData = d; });
+    }
+    apiGet(`/api/file?path=${encodeURIComponent(state.selectedFile)}`).then((f) => { state.filePayload = f; });
+
+    await runPantheonTrial();
+    state.wResult = state.pantheonResult?.runs?.[2] || null; // Preload Athena into Workbench!
+  } catch (err) {
+    document.getElementById("app").replaceChildren(h("div", { class: "panel pbody", style: "color:var(--fail)" }, `Failed to initialize Studio: ${err.message}`));
+  }
+  render();
+}
+
+boot();
+</script>
+</body>
+</html>

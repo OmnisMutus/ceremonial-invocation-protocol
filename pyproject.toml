@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "invocation-protocol"
+version = "0.3.0"
+description = "Reusable LLM Ceremonial Invocation Protocol and 4-arm evaluation harness (stdlib-only Python)"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/OmnisMutus/ceremonial-invocation-protocol"
+Repository = "https://github.com/OmnisMutus/ceremonial-invocation-protocol"
+Issues = "https://github.com/OmnisMutus/ceremonial-invocation-protocol/issues"
+
+[project.scripts]
+invocation-protocol = "invocation_protocol.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["invocation_protocol*"]
+
+[tool.setuptools.package-data]
+invocation_protocol = ["viewer_template.html", "studio_template.html"]

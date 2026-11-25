@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Verify CLI version and zero-dependency test suite
+        run: |
+          python -B -m invocation_protocol --version
+          python -B -m unittest discover -s tests -v
+
+      - name: Verify package installs and console script runs
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install .
+          invocation-protocol --version
+          cd "$RUNNER_TEMP" && invocation-protocol view "$GITHUB_WORKSPACE/runs/live_qwen3/traces.jsonl" --out viewer.html && grep -q "Liber E" viewer.html
+
+      - name: Verify SHA-256 chains against published head hashes and compare archived runs
+        run: |
+          python -B -m invocation_protocol verify-ledger --trace-path runs/live_qwen25/traces.jsonl --expect-head f14a9506336e0b2afb7827da18364f4f2eba86ccc5911ae3c67b773309f219cc
+          python -B -m invocation_protocol verify-ledger --trace-path runs/live_qwen3/traces.jsonl --expect-head c503430fe5daac1d714a51ff0e9984c1bd12f9bcd359eb63441a09c095bf0222
+          python -B -m invocation_protocol verify-ledger --trace-path runs/live_v1_1_qwen3/traces.jsonl --expect-head cfcfad5bb6ea69e7d1ca717c1629b840ade1e6a9a5684d42cb29af8f8b5d93f1
+          python -B -m invocation_protocol compare runs/live_qwen25/traces.jsonl runs/live_qwen3/traces.jsonl runs/live_v1_1_qwen3/traces.jsonl --by-form
+
+      - name: Run uncapped AST mutation gate (0 survivors allowed)
+        if: matrix.python-version == '3.12'
+        run: |
+          python -B scripts/mutate.py
