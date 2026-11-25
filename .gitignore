@@ -16,6 +16,9 @@ runs/live_qwen3/*
 !runs/live_v1_1_qwen3/
 runs/live_v1_1_qwen3/*
 !runs/live_v1_1_qwen3/traces.jsonl
+!runs/live_v1_2_qwen3/
+runs/live_v1_2_qwen3/*
+!runs/live_v1_2_qwen3/traces.jsonl
 *.tmp
 .coverage
 htmlcov/
