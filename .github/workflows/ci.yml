@@ -48,7 +48,8 @@ jobs:
           python -B -m invocation_protocol verify-ledger --trace-path runs/live_qwen3/traces.jsonl --expect-head c503430fe5daac1d714a51ff0e9984c1bd12f9bcd359eb63441a09c095bf0222
           python -B -m invocation_protocol verify-ledger --trace-path runs/live_v1_1_qwen3/traces.jsonl --expect-head cfcfad5bb6ea69e7d1ca717c1629b840ade1e6a9a5684d42cb29af8f8b5d93f1
           python -B -m invocation_protocol verify-ledger --trace-path runs/live_v1_2_qwen3/traces.jsonl --expect-head 8d217d34946c88acdbf2a29df9325fb1986295172e8e878644daffeb24f506b0
-          python -B -m invocation_protocol compare runs/live_qwen25/traces.jsonl runs/live_qwen3/traces.jsonl runs/live_v1_1_qwen3/traces.jsonl runs/live_v1_2_qwen3/traces.jsonl --by-form
+          python -B -m invocation_protocol verify-ledger --trace-path runs/live_v1_3_gptoss20b/traces.jsonl --expect-head 6e61f454ddd6a78e094e0bf1e442fc7b380fa38c0c3bca51cd74cabe4d7bd791
+          python -B -m invocation_protocol compare runs/live_qwen25/traces.jsonl runs/live_qwen3/traces.jsonl runs/live_v1_1_qwen3/traces.jsonl runs/live_v1_2_qwen3/traces.jsonl runs/live_v1_3_gptoss20b/traces.jsonl --by-form
 
       - name: Run uncapped AST mutation gate (0 survivors allowed)
         if: matrix.python-version == '3.12'
