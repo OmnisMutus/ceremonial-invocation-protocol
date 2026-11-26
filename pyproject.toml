@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=77.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,7 +7,8 @@ name = "invocation-protocol"
 version = "0.3.0"
 description = "Reusable LLM Ceremonial Invocation Protocol and 4-arm evaluation harness (stdlib-only Python)"
 readme = "README.md"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = []
 
@@ -19,8 +20,17 @@ Issues = "https://github.com/OmnisMutus/ceremonial-invocation-protocol/issues"
 [project.scripts]
 invocation-protocol = "invocation_protocol.cli:main"
 
-[tool.setuptools.packages.find]
-include = ["invocation_protocol*"]
+[tool.setuptools]
+# The repo's top-level forms/ and tasks/ are shipped inside the wheel as data-only
+# subpackages, so an installed package works outside a checkout without keeping a second
+# copy of the files in the repo. See invocation_protocol.forms.resolve_data_paths().
+packages = ["invocation_protocol", "invocation_protocol.data_forms", "invocation_protocol.data_tasks"]
+
+[tool.setuptools.package-dir]
+"invocation_protocol.data_forms" = "forms"
+"invocation_protocol.data_tasks" = "tasks"
 
 [tool.setuptools.package-data]
 invocation_protocol = ["viewer_template.html", "studio_template.html"]
+"invocation_protocol.data_forms" = ["*.json"]
+"invocation_protocol.data_tasks" = ["*.json"]

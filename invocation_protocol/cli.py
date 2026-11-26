@@ -16,13 +16,36 @@ from invocation_protocol.backends import (
     OpenAICompatibleBackend,
 )
 from invocation_protocol.compare import compare_ledgers, format_comparison
-from invocation_protocol.forms import load_form, load_task_battery
+from invocation_protocol.forms import load_form, load_task_battery, resolve_data_paths
 from invocation_protocol.harness import EvaluationHarness, format_summary
 from invocation_protocol.ledger import LiberELedger
 from invocation_protocol.runner import InvocationRunner
 from invocation_protocol.types import Arm, InvocationError, RunConfig, RunResult
 from invocation_protocol.studio import create_studio_server
 from invocation_protocol.viewer import write_viewer
+
+
+def resolve_cli_data_paths(forms_arg: str | None, tasks_arg: str | None) -> tuple[Path, Path]:
+    """Use explicit --forms-dir / --tasks when given; fill the rest from the checkout or bundled data."""
+    if forms_arg is not None and tasks_arg is not None:
+        return Path(forms_arg), Path(tasks_arg)
+    default_forms, default_tasks = resolve_data_paths()
+    return (
+        Path(forms_arg) if forms_arg is not None else default_forms,
+        Path(tasks_arg) if tasks_arg is not None else default_tasks,
+    )
+
+
+def resolve_form_arg(value: str, forms_dir: Path) -> Path:
+    """Accept a FormSpec file path, or a bare form id ('thoth') looked up in ``forms_dir``."""
+    as_path = Path(value)
+    if as_path.is_file():
+        return as_path
+    by_id = forms_dir / f"{value}.json"
+    if by_id.is_file():
+        return by_id
+    known = sorted(p.stem for p in forms_dir.glob("*.json"))
+    raise InvocationError(f"Form {value!r} is neither a file nor a known form id {known}")
 
 
 def format_run_header(
@@ -170,8 +193,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     p_matrix.add_argument("--model", default="")
     p_matrix.add_argument("--base-url", default="")
     p_matrix.add_argument("--trace-dir", default="runs/latest")
-    p_matrix.add_argument("--forms-dir", default="forms")
-    p_matrix.add_argument("--tasks", default="tasks/battery.json")
+    p_matrix.add_argument(
+        "--forms-dir", default=None, help="FormSpec directory (default: ./forms in a checkout, else the bundled forms)"
+    )
+    p_matrix.add_argument(
+        "--tasks", default=None, help="Task battery JSON (default: ./tasks/battery.json in a checkout, else the bundled battery)"
+    )
     p_matrix.add_argument("--seed", type=int, default=42)
     p_matrix.add_argument("--temperature", type=float, default=0.0)
     p_matrix.add_argument("--timeout", type=float, default=120.0)
@@ -181,9 +208,11 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     p_invoke = sub.add_parser("invoke", help="Run a single 7-step invocation")
     p_invoke.add_argument("--arm", choices=[arm.value for arm in Arm], required=True)
-    p_invoke.add_argument("--form", default="")
+    p_invoke.add_argument("--form", default="", help="FormSpec JSON path, or a bundled form id such as 'thoth'")
     p_invoke.add_argument("--task-id", required=True)
-    p_invoke.add_argument("--tasks", default="tasks/battery.json")
+    p_invoke.add_argument(
+        "--tasks", default=None, help="Task battery JSON (default: ./tasks/battery.json in a checkout, else the bundled battery)"
+    )
     p_invoke.add_argument("--trace-dir", default="runs/single")
     p_invoke.add_argument("--backend", choices=("stub", "ollama", "openai"), default="stub")
     p_invoke.add_argument("--model", default="")
@@ -317,13 +346,14 @@ def main(argv: Sequence[str] | None = None) -> int:
                 context_length=args.num_ctx,
                 timeout_seconds=args.timeout,
             )
+            forms_dir, tasks_path = resolve_cli_data_paths(args.forms_dir, args.tasks)
             harness = EvaluationHarness(
                 backend=backend,
                 trace_dir=Path(args.trace_dir),
-                forms_dir=Path(args.forms_dir),
-                tasks_path=Path(args.tasks),
+                forms_dir=forms_dir,
+                tasks_path=tasks_path,
             )
-            tasks_by_id = {t.task_id: t.category for t in load_task_battery(args.tasks)}
+            tasks_by_id = {t.task_id: t.category for t in load_task_battery(tasks_path)}
 
             before_cb = None
             progress_cb = None
@@ -383,12 +413,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             stream_tokens = bool(args.live and args.backend == "ollama")
             on_token = (lambda tok: print(tok, end="", flush=True)) if stream_tokens else None
             backend = _build_backend(args, on_token=on_token)
-            tasks = {t.task_id: t for t in load_task_battery(args.tasks)}
+            forms_dir, tasks_path = resolve_cli_data_paths(None, args.tasks)
+            tasks = {t.task_id: t for t in load_task_battery(tasks_path)}
             if args.task_id not in tasks:
                 print(f"Unknown task_id {args.task_id!r}", file=sys.stderr)
                 return 2
             task = tasks[args.task_id]
-            form = load_form(args.form) if args.form else None
+            form = load_form(resolve_form_arg(args.form, forms_dir)) if args.form else None
             trace_dir = Path(args.trace_dir)
             ledger = LiberELedger(trace_dir / "traces.jsonl", trace_dir / "commentary.jsonl")
             runner = InvocationRunner(backend=backend, ledger=ledger)

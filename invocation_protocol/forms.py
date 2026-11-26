@@ -221,3 +221,53 @@ def load_task_battery(path: str | Path) -> tuple[TaskSpec, ...]:
     if not isinstance(raw_tasks, list) or len(raw_tasks) == 0:
         raise ValidationError("Task battery must contain a non-empty 'tasks' list")
     return tuple(parse_task_dict(item) for item in raw_tasks)
+
+
+_PKG_DIR: Path = Path(__file__).resolve().parent
+TASK_BATTERY_NAME: str = "battery.json"
+
+
+def _first_existing_dir(*candidates: Path) -> Path:
+    for candidate in candidates:
+        if candidate.is_dir():
+            return candidate
+    raise ValidationError(f"Bundled data not found; looked in {[str(c) for c in candidates]}")
+
+
+def packaged_forms_dir() -> Path:
+    """Directory of the bundled FormSpec JSON files.
+
+    In an installed wheel they live in ``invocation_protocol/data_forms/`` (pyproject maps the
+    repo's top-level ``forms/`` there, so the repo keeps a single copy). In a source checkout
+    the top-level ``forms/`` next to the package is used directly.
+    """
+    return _first_existing_dir(_PKG_DIR / "data_forms", _PKG_DIR.parent / "forms")
+
+
+def packaged_tasks_path() -> Path:
+    """Path of the bundled task battery (``data_tasks/battery.json`` in a wheel, else ``tasks/``)."""
+    return _first_existing_dir(_PKG_DIR / "data_tasks", _PKG_DIR.parent / "tasks") / TASK_BATTERY_NAME
+
+
+def resolve_data_paths(root: str | Path | None = None) -> tuple[Path, Path]:
+    """Return ``(forms_dir, tasks_path)`` for ``root`` (default: the current directory).
+
+    A checkout that has both ``forms/`` and ``tasks/battery.json`` uses its own copies, so local
+    edits take effect. A directory with neither uses the bundled copies, so an installed package
+    works from anywhere. A directory with only one of them is ambiguous and raises
+    ``ValidationError`` instead of silently mixing local and bundled data.
+    """
+    base = Path(root) if root is not None else Path.cwd()
+    forms_dir = base / "forms"
+    tasks_path = base / "tasks" / TASK_BATTERY_NAME
+    has_forms = forms_dir.is_dir()
+    has_tasks = tasks_path.is_file()
+    if has_forms and has_tasks:
+        return forms_dir, tasks_path
+    if has_forms or has_tasks:
+        present = "forms/" if has_forms else "tasks/battery.json"
+        raise ValidationError(
+            f"{base} has {present} but not the other; provide both forms/ and tasks/battery.json, "
+            "or neither to use the bundled copies"
+        )
+    return packaged_forms_dir(), packaged_tasks_path()

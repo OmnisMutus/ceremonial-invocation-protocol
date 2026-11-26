@@ -29,12 +29,18 @@ jobs:
           python -B -m invocation_protocol --version
           python -B -m unittest discover -s tests -v
 
-      - name: Verify package installs and console script runs
+      - name: Verify installed package works outside the checkout (bundled forms, tasks, templates)
         run: |
           python -m pip install --upgrade pip
           python -m pip install .
           invocation-protocol --version
-          cd "$RUNNER_TEMP" && invocation-protocol view "$GITHUB_WORKSPACE/runs/live_qwen3/traces.jsonl" --out viewer.html && grep -q "Liber E" viewer.html
+          mkdir -p "$RUNNER_TEMP/outside" && cd "$RUNNER_TEMP/outside"
+          test ! -e forms && test ! -e tasks
+          invocation-protocol view "$GITHUB_WORKSPACE/runs/live_qwen3/traces.jsonl" --out viewer.html && grep -q "Liber E" viewer.html
+          invocation-protocol matrix --backend stub --trace-dir m | tee matrix.txt
+          grep -q "(35 total runs)" matrix.txt
+          invocation-protocol invoke --arm arm_3_protocol_form --form thoth --task-id task_tool_01 --trace-dir i | grep -q "verdict=PASSED"
+          python -c "from invocation_protocol.forms import packaged_forms_dir as d; assert 'site-packages' in str(d()), d()"
 
       - name: Verify SHA-256 chains against published head hashes and compare archived runs
         run: |

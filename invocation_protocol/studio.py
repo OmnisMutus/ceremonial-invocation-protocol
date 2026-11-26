@@ -29,7 +29,7 @@ from invocation_protocol.backends import (
     ModelBackend,
     OllamaBackend,
 )
-from invocation_protocol.forms import CANONICAL_CORRESPONDENCES, load_form, load_task_battery
+from invocation_protocol.forms import CANONICAL_CORRESPONDENCES, load_form, load_task_battery, resolve_data_paths
 from invocation_protocol.harness import EvaluationHarness, _task_is_accurate
 from invocation_protocol.hierarchy import assemble_messages, build_authority_stack
 from invocation_protocol.ledger import LiberELedger
@@ -204,12 +204,12 @@ def build_overview_payload(
     from invocation_protocol import __version__
 
     root = repo_root.resolve()
-    forms_dir = root / "forms"
+    forms_dir, tasks_path = resolve_data_paths(root)
     forms_list = [
         _serialize_form(load_form(p))
         for p in sorted(forms_dir.glob("*.json"))
     ]
-    tasks_list = [_serialize_task(t) for t in load_task_battery(root / "tasks" / "battery.json")]
+    tasks_list = [_serialize_task(t) for t in load_task_battery(tasks_path)]
 
     canonical = {
         cid: {
@@ -354,8 +354,8 @@ def _resolve_task_and_forms(
     repo_root: Path,
     req: Mapping[str, Any],
 ) -> tuple[TaskSpec, dict[str, FormSpec]]:
-    root = repo_root.resolve()
-    tasks = {t.task_id: t for t in load_task_battery(root / "tasks" / "battery.json")}
+    forms_dir, tasks_path = resolve_data_paths(repo_root.resolve())
+    tasks = {t.task_id: t for t in load_task_battery(tasks_path)}
     task_id = str(req.get("task_id", "task_sycophancy_01")).strip()
     if task_id not in tasks:
         raise ValidationError(f"Unknown task_id: {task_id!r}")
@@ -365,7 +365,7 @@ def _resolve_task_and_forms(
         task = replace(task, prompt=custom_prompt.strip())
     forms_map = {
         p.stem: load_form(p)
-        for p in sorted((root / "forms").glob("*.json"))
+        for p in sorted(forms_dir.glob("*.json"))
     }
     return task, forms_map
 
@@ -488,11 +488,12 @@ def execute_matrix(
     config = _build_run_config(req, backend_kind)
 
     out_dir = root / "runs" / "studio_matrix"
+    forms_dir, tasks_path = resolve_data_paths(root)
     harness = EvaluationHarness(
         backend=backend,
         trace_dir=out_dir,
-        forms_dir=root / "forms",
-        tasks_path=root / "tasks" / "battery.json",
+        forms_dir=forms_dir,
+        tasks_path=tasks_path,
     )
     report = harness.run_matrix(config)
     rel_trace = Path(report.trace_path).resolve().relative_to(root).as_posix()
@@ -549,8 +550,10 @@ def create_studio_server(
     as ``application/json`` from its own origin (blocks cross-site form/fetch requests).
     """
     root = Path(repo_root).resolve()
-    if not (root / "forms").is_dir() or not (root / "tasks" / "battery.json").is_file():
-        raise ValidationError(f"Invalid Ceremonial Invocation Protocol root: {root}")
+    if not root.is_dir():
+        raise ValidationError(f"Studio root is not a directory: {root}")
+    # Checkout -> its own forms/ and tasks/; empty dir -> bundled data; half-checkout -> error.
+    resolve_data_paths(root)
     if host not in _LOOPBACK_HOSTS and not allow_remote:
         raise ValidationError(
             f"Refusing to bind Studio to non-loopback host {host!r}: it can read repo files and run "

@@ -179,6 +179,23 @@ Evaluated deterministically in `EvaluationHarness`:
 
 ## Quickstart & Verification Commands
 
+### Install (no checkout needed)
+
+```powershell
+pip install git+https://github.com/OmnisMutus/ceremonial-invocation-protocol
+invocation-protocol matrix --backend stub --trace-dir runs/stub_eval
+invocation-protocol invoke --arm arm_3_protocol_form --form thoth --task-id task_tool_01
+```
+
+The wheel bundles the five `forms/*.json` profiles and `tasks/battery.json`; `pyproject.toml` maps the repo's top-level folders into the package, so the repo keeps a single copy. Every command picks its data the same way:
+- **Directory with both `forms/` and `tasks/battery.json`** (a checkout): uses its own copies, so your edits take effect.
+- **Directory with neither:** uses the bundled copies.
+- **Directory with only one:** refuses to mix local and bundled data.
+
+`--forms-dir` and `--tasks` override the defaults, and `--form` accepts either a file path or a bundled form id (`thoth`, `maat`, `athena`, `profile_08`, `thoth_corrupted`). CI installs the package and runs `matrix` and `invoke` from an empty directory to check this.
+
+### From a checkout
+
 Run all commands from the repository root (`invocation-protocol/`). Every command uses stdlib Python (`>=3.11`) with `-B` to avoid stale `.pyc` bytecode:
 
 ```powershell
@@ -304,7 +321,7 @@ Published head hashes (detect truncation or replacement with `verify-ledger --ex
 - **LLM Evaluation & Safety Researchers:** Point `matrix` and `compare` at any local Ollama model or OpenAI-compatible API (`/v1/chat/completions`) to measure sycophancy pushback, quote fidelity, phantom tool-call rates, reasoning verbosity (`MeanThink`), and persona boundary stability — adding custom tasks in `tasks/battery.json` or profiles in `forms/` without writing Python.
 - **Builders of High-Trust RAG & Tool Agents:** Reuse `InvocationRunner` (`runner.py`) and `gates.py` as a zero-dependency, fail-closed wrapper around single-task model calls (document QA, compliance extraction, research synthesis) where fabricated quotes or unexecuted tool claims must fail closed rather than pass plausible prose downstream.
 - **Researchers Studying Operational Ritual Structure in Software:** Demonstrates how classical operational method (*Liber O* hierarchy, bounded charge, testing the spirit, banishing; *Liber E* append-only lab record separated from commentary) maps cleanly onto auditable state machines with zero metaphysical claims.
-- **Engineers Adopting `STANDARD.md`:** Serves as a compact, zero-dependency reference Python repository combining independent ground-truth tests, loopback HTTP server tests, and uncapped AST mutation testing (`scripts/mutate.py`, `280/280` mutants killed as of v1.3, run in isolated sandboxes).
+- **Engineers Adopting `STANDARD.md`:** Serves as a compact, zero-dependency reference Python repository combining independent ground-truth tests, loopback HTTP server tests, and uncapped AST mutation testing (`scripts/mutate.py`, `282/282` mutants killed as of v1.3, run in isolated sandboxes).
 
 ---
 
