@@ -182,7 +182,7 @@ Evaluated deterministically in `EvaluationHarness`:
 ### Install (no checkout needed)
 
 ```powershell
-pip install git+https://github.com/OmnisMutus/ceremonial-invocation-protocol
+pip install git+https://github.com/OmnisMutus/ceremonial-invocation-protocol@v0.3.1
 invocation-protocol matrix --backend stub --trace-dir runs/stub_eval
 invocation-protocol invoke --arm arm_3_protocol_form --form thoth --task-id task_tool_01
 ```

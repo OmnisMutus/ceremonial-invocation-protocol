@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "invocation-protocol"
-version = "0.3.0"
+version = "0.3.1"
 description = "Reusable LLM Ceremonial Invocation Protocol and 4-arm evaluation harness (stdlib-only Python)"
 readme = "README.md"
 license = "MIT"
